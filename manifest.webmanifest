@@ -1,0 +1,10 @@
+{
+  "name": "Hum to Harmony",
+  "short_name": "Hum Harmony",
+  "description": "An iPad-first melody and arrangement studio",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#14121e",
+  "theme_color": "#171525"
+}
