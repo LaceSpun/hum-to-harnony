@@ -18,6 +18,12 @@ function cleanDetect(buf){let sr=buf.sampleRate,src=buf.getChannelData(0),win=Ma
 let pitch=frames.map((p,i)=>{if(!p)return null;let near=frames.slice(Math.max(0,i-2),i+3).filter(Boolean).map(x=>x.m).sort((a,b)=>a-b);let median=near[Math.floor(near.length/2)];return Math.abs(p.m-median)>1.2?null:Math.round(median)});
 for(let i=1;i<pitch.length-1;i++)if(pitch[i]===null&&pitch[i-1]!==null&&pitch[i-1]===pitch[i+1])pitch[i]=pitch[i-1];
 let result=[],cur=null,start=0;for(let i=0;i<=pitch.length;i++){let v=i<pitch.length?pitch[i]:null;if(v!==cur){let dur=(i-start)*hop/sr;if(cur!==null&&dur>=.095)result.push({m:Math.max(36,Math.min(96,cur)),t:start*hop/sr,d:dur});cur=v;start=i}}
+// Repair brief octave-down errors only when both neighboring notes agree.
+for(let i=1;i<result.length-1;i++){
+  let n=result[i], prev=result[i-1], next=result[i+1], target=n.m+12;
+  if(n.d<.40 && Math.abs(target-prev.m)<=2 && Math.abs(target-next.m)<=2 &&
+     Math.abs(n.m-prev.m)>=9 && Math.abs(n.m-next.m)>=9) n.m=target;
+}
 let merged=[];for(let n of result){let last=merged[merged.length-1];if(last&&last.m===n.m&&n.t-(last.t+last.d)<.09){last.d=n.t+n.d-last.t}else merged.push(n)}
 return merged.slice(0,150)}
 function render(){let container=$('note-grid');container.replaceChildren();if(!notes.length){container.textContent='No notes to display.';return}
@@ -29,7 +35,6 @@ notes.forEach((n,i)=>{let x=n.t/end*width,w=Math.max(5,n.d/end*width),y=height-(
 $('note-info').textContent=selected<0?'Tap a note to edit it.':`Note ${selected+1} / ${notes.length} · MIDI pitch ${notes[selected].m} · starts ${notes[selected].t.toFixed(2)}s · lasts ${notes[selected].d.toFixed(2)}s`;
 $('melody-warning').textContent=`${notes.length} notes. Pitch and timing are estimates, not a verified transcription. Compare by ear before approving.`;
 }
-function change(fn){if(selected<0||!notes[selected])return;fn(notes[selected]);notes.sort((a,b)=>a.t-b.t);selected=notes.indexOf(notes.find(n=>n===active)) ;render()}
 let active;
 function edit(fn){if(selected<0)return;active=notes[selected];fn(active);notes.sort((a,b)=>a.t-b.t);selected=notes.indexOf(active);render()}
 $('pitch-up').onclick=()=>edit(n=>n.m=Math.min(96,n.m+1));
